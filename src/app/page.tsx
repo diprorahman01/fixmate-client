@@ -1,5 +1,6 @@
 
 import { Suspense } from "react";
+import { connection } from "next/server";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -293,8 +294,8 @@ export default function HomePage() {
       <section className="bg-muted/35 py-20">
         <div className="fixmate-container">
           <Suspense fallback={<FeaturedServicesSkeleton />}>
-            <FeaturedServices />
-          </Suspense>
+  <FeaturedServices />
+</Suspense>
         </div>
       </section>
 
@@ -475,7 +476,12 @@ export default function HomePage() {
 // the whole homepage during Next.js prerendering.
 //
 
+
 async function FeaturedServices() {
+  // Wait for an actual request before loading
+  // services from the Express API.
+  await connection();
+
   const featuredServices = await getServices({
     sort: "newest",
     limit: 6,
@@ -483,6 +489,7 @@ async function FeaturedServices() {
 
   return (
     <>
+
       <div className="flex flex-wrap items-end justify-between gap-5">
         <SectionHeading
           eyebrow="REPAIR SERVICES"
