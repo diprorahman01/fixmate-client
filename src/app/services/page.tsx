@@ -21,6 +21,7 @@ function ServiceCatalog() {
   const router = useRouter();
   const params = useSearchParams();
   const query = params.toString();
+  const filtered = Boolean(params.get("search") || params.get("category") || params.get("serviceMode") || params.get("sort"));
   const [search, setSearch] = useState(params.get("search") ?? "");
   const [category, setCategory] = useState(params.get("category") ?? "");
   const [serviceMode, setServiceMode] = useState(params.get("serviceMode") ?? "");
@@ -99,7 +100,7 @@ function ServiceCatalog() {
           {loading ? <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{[0,1,2,3,4,5].map(i=><div key={i} className="h-80 animate-pulse rounded-3xl bg-muted"/>)}</div> :
           error ? <div role="alert" className="rounded-2xl border border-destructive p-8 text-destructive">{error}</div> :
           services.length ? <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">{services.map(service=><ServiceCard key={service._id} service={service}/>)}</div> :
-          <div className="rounded-3xl border border-dashed border-border bg-card p-12 text-center"><Wrench className="mx-auto mb-4 size-12 text-primary"/><h2 className="text-xl font-bold">No matching services</h2><p className="mt-2 text-muted-foreground">Try a different search or remove your filters.</p><button type="button" onClick={clear} className="mt-5 rounded-xl bg-primary px-5 py-3 font-semibold text-primary-foreground">Show All Services</button></div>}
+          <div className="rounded-3xl border border-dashed border-border bg-card p-12 text-center"><Wrench className="mx-auto mb-4 size-12 text-primary"/><h2 className="text-xl font-bold">{filtered ? "No matching services" : "No approved services yet"}</h2><p className="mt-2 text-muted-foreground">{filtered ? "Try different filters or show all available services." : "Technicians can submit services. Once an Admin approves and enables them, they will appear here."}</p>{filtered && <button type="button" onClick={clear} className="mt-5 rounded-xl bg-primary px-5 py-3 font-semibold text-primary-foreground">Show All Services</button>}</div>}
         </div>
       </div>
     </div>
