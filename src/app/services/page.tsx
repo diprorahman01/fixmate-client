@@ -1,396 +1,435 @@
 
-import { Suspense } from "react";
-import type { Metadata } from "next";
-import Link from "next/link";
+"use client";
 
+import { useCallback, useEffect, useState } from "react";
 import {
-  ArrowRight,
-  Search,
-  SlidersHorizontal,
-  Wrench,
+  CheckCircle2,
+  XCircle,
+  Clock3,
+  RefreshCw,
+  Loader2,
+  ShieldCheck,
 } from "lucide-react";
 
+import { toast } from "sonner";
+
 import {
-  getServices,
-  SERVICE_CATEGORIES,
-} from "@/lib/services";
+  getAdminServices,
+  reviewService,
+  type AdminService,
+  type ApprovalStatus,
+} from "@/lib/admin";
 
-import { ServiceCard } from "@/components/services/service-card";
+const filters: ApprovalStatus[] = [
+  "pending",
+  "all",
+  "approved",
+  "rejected",
+];
 
-export const metadata: Metadata = {
-  title: "Browse Repair Services",
-  description:
-    "Browse approved repair services for smartphones, laptops and home appliances with FixMate.",
-};
-
-// ==================================================
-// TYPES
-// ==================================================
-
-type SearchParams = {
-  search?: string | string[];
-  category?: string | string[];
-  serviceMode?: string | string[];
-  sort?: string | string[];
-};
-
-type ServicesPageProps = {
-  searchParams: Promise<SearchParams>;
-};
-
-// ==================================================
-// HELPER FUNCTION
-// ==================================================
-
-function getString(value?: string | string[]) {
-  return typeof value === "string" ? value : "";
+function errorMessage(error: unknown) {
+  return error instanceof Error
+    ? error.message
+    : "Something went wrong";
 }
 
-// ==================================================
-// MAIN SERVICES PAGE
-// ==================================================
+// ==========================================
+// SERVICE APPROVAL PAGE
+// ==========================================
 
-export default function ServicesPage({
-  searchParams,
-}: ServicesPageProps) {
+export default function ServiceApprovalPage() {
+  const [filter, setFilter] =
+    useState<ApprovalStatus>("pending");
+
+  const [services, setServices] =
+    useState<AdminService[]>([]);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const [busyId, setBusyId] =
+    useState<string | null>(null);
+
+  const [confirmAction, setConfirmAction] =
+    useState<{
+      service: AdminService;
+      status: "approved" | "rejected";
+    } | null>(null);
+
+  // ========================================
+  // FETCH SERVICES
+  // ========================================
+
+  useEffect(() => {
+    let active = true;
+
+    getAdminServices(filter)
+      .then((data) => {
+        if (!active) return;
+        setServices(data);
+        setError("");
+      })
+      .catch((err: unknown) => {
+        if (active) setError(errorMessage(err));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [filter]);
+
+  const refreshServices = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const data = await getAdminServices(filter);
+      setServices(data);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [filter]);
+
+  // ========================================
+  // APPROVE OR REJECT
+  // ========================================
+
+  async function confirmReview() {
+    if (!confirmAction || busyId) return;
+
+    const { service, status } = confirmAction;
+    setBusyId(service._id);
+
+    try {
+      const result = await reviewService(
+        service._id,
+        status
+      );
+
+      toast.success(result.message);
+      setConfirmAction(null);
+
+      // An approved/rejected service should
+      // leave the Pending filter immediately.
+      setServices((previous) =>
+        filter === "pending"
+          ? previous.filter(
+              (item) => item._id !== service._id
+            )
+          : previous.map((item) =>
+              item._id === service._id
+                ? {
+                    ...item,
+                    approvalStatus: status,
+                  }
+                : item
+            )
+      );
+
+      // Refresh for canonical database state.
+      await refreshServices();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const pendingCount = services.filter(
+    (service) =>
+      service.approvalStatus === "pending"
+  ).length;
+
   return (
-    <>
-      {/* PAGE HEADER */}
-      <section className="border-b border-border bg-muted/35 py-16">
-        <div className="fixmate-container">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary">
-            <Wrench className="size-4" />
-            FixMate Repair Services
+    <section className="pb-12">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold text-primary">
+            <ShieldCheck className="size-4" />
+            Admin Moderation
           </div>
 
-          <h1 className="max-w-3xl text-4xl font-extrabold tracking-tight sm:text-5xl">
-            Find the Right{" "}
-            <span className="fixmate-gradient-text">
-              Repair Service
-            </span>
+          <h1 className="text-3xl font-extrabold">
+            Service Approval
           </h1>
 
-          <p className="mt-5 max-w-2xl text-base leading-8 text-muted-foreground">
-            Explore trusted repair services for your
-            smartphones, laptops, and home appliances.
-            Search, compare, and choose the service
-            that meets your needs.
+          <p className="mt-3 text-muted-foreground">
+            Review repair services submitted
+            by technicians.
           </p>
         </div>
-      </section>
 
-      {/* DYNAMIC SERVICES SECTION */}
-      <section className="py-12 sm:py-16">
-        <div className="fixmate-container">
-          <Suspense fallback={<ServicesLoadingSkeleton />}>
-            <ServicesContent searchParams={searchParams} />
-          </Suspense>
-        </div>
-      </section>
-    </>
-  );
-}
+        <button
+          type="button"
+          disabled={loading || busyId !== null}
+          onClick={() => void refreshServices()}
+          className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-sm font-semibold hover:bg-muted disabled:opacity-50"
+        >
+          <RefreshCw className="size-4" />
+          Refresh
+        </button>
+      </div>
 
-// ==================================================
-// DYNAMIC SERVICES CONTENT
-// ==================================================
-//
-// Next.js 16 may block uncached fetch requests
-// during prerendering.
-//
-// By rendering this async component inside
-// Suspense, the page can display a loading
-// fallback while the service data loads.
-//
+      {/* STATUS FILTERS */}
 
-async function ServicesContent({
-  searchParams,
-}: ServicesPageProps) {
-  const params = await searchParams;
-
-  const search = getString(params.search);
-  const category = getString(params.category);
-  const serviceMode = getString(params.serviceMode);
-  const sort = getString(params.sort) || "newest";
-
-  // Fetch service data from the Express backend.
-  // Filtering and sorting will be implemented
-  // in MongoDB rather than in the browser.
-  const services = await getServices({
-    search,
-    category,
-    serviceMode,
-    sort,
-  });
-
-  return (
-    <>
-      {/* ============================================
-          SEARCH & FILTER PANEL
-      ============================================ */}
-
-      <form
-        action="/services"
-        method="GET"
-        className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-7"
-      >
-        <div className="mb-6 flex items-center gap-3">
-          <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <SlidersHorizontal className="size-5" />
-          </div>
-
-          <div>
-            <h2 className="text-lg font-bold">
-              Find Your Repair Service
-            </h2>
-
-            <p className="text-sm text-muted-foreground">
-              Search and filter available services
-            </p>
-          </div>
-        </div>
-
-        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-          {/* Search Input */}
-          <div>
-            <label
-              htmlFor="service-search"
-              className="mb-2 block text-sm font-semibold"
-            >
-              Search Services
-            </label>
-
-            <div className="relative">
-              <Search className="absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
-
-              <input
-                id="service-search"
-                type="search"
-                name="search"
-                defaultValue={search}
-                placeholder="Phone, AC, laptop..."
-                className="h-12 w-full rounded-xl border border-input bg-background pr-4 pl-11 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/10"
-              />
-            </div>
-          </div>
-
-          {/* Category Filter */}
-          <div>
-            <label
-              htmlFor="category"
-              className="mb-2 block text-sm font-semibold"
-            >
-              Category
-            </label>
-
-            <select
-              id="category"
-              name="category"
-              defaultValue={category}
-              className="h-12 w-full rounded-xl border border-input bg-background px-4 text-sm outline-none transition-colors focus:border-primary"
-            >
-              <option value="">
-                All Categories
-              </option>
-
-              {SERVICE_CATEGORIES.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Service Mode Filter */}
-          <div>
-            <label
-              htmlFor="serviceMode"
-              className="mb-2 block text-sm font-semibold"
-            >
-              Service Mode
-            </label>
-
-            <select
-              id="serviceMode"
-              name="serviceMode"
-              defaultValue={serviceMode}
-              className="h-12 w-full rounded-xl border border-input bg-background px-4 text-sm outline-none transition-colors focus:border-primary"
-            >
-              <option value="">
-                All Service Modes
-              </option>
-
-              <option value="Home Visit">
-                Home Visit
-              </option>
-
-              <option value="Shop Drop-off">
-                Shop Drop-off
-              </option>
-            </select>
-          </div>
-
-          {/* Sort Dropdown */}
-          <div>
-            <label
-              htmlFor="sort"
-              className="mb-2 block text-sm font-semibold"
-            >
-              Sort By
-            </label>
-
-            <select
-              id="sort"
-              name="sort"
-              defaultValue={sort}
-              className="h-12 w-full rounded-xl border border-input bg-background px-4 text-sm outline-none transition-colors focus:border-primary"
-            >
-              <option value="newest">
-                Newest First
-              </option>
-
-              <option value="price-asc">
-                Price: Low to High
-              </option>
-
-              <option value="price-desc">
-                Price: High to Low
-              </option>
-            </select>
-          </div>
-        </div>
-
-        {/* Filter Buttons */}
-        <div className="mt-6 flex flex-wrap items-center gap-3">
+      <div className="mb-6 flex flex-wrap gap-2">
+        {filters.map((status) => (
           <button
-            type="submit"
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+            key={status}
+            type="button"
+            disabled={busyId !== null}
+            aria-pressed={filter === status}
+            onClick={() => {
+              if (filter !== status) {
+                setLoading(true);
+                setFilter(status);
+              }
+            }}
+            className={`rounded-xl border px-4 py-2 text-sm font-semibold capitalize transition-colors ${
+              filter === status
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-card hover:bg-muted"
+            }`}
           >
-            <Search className="size-4" />
-            Apply Filters
+            {status}
           </button>
-
-          <Link
-            href="/services"
-            className="inline-flex h-12 items-center justify-center rounded-xl border border-border bg-background px-6 text-sm font-medium transition-colors hover:bg-muted"
-          >
-            Clear All
-          </Link>
-        </div>
-      </form>
-
-      {/* ============================================
-          RESULTS HEADING
-      ============================================ */}
-
-      <div className="mt-12 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="mb-2 text-xs font-bold tracking-widest text-primary">
-            AVAILABLE REPAIRS
-          </p>
-
-          <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-            Browse Services
-          </h2>
-
-          <p className="mt-2 text-sm text-muted-foreground">
-            {services.length} services returned
-          </p>
-        </div>
-      </div>
-
-      {/* ============================================
-          SERVICE RESULTS
-      ============================================ */}
-
-      {services.length > 0 ? (
-        <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {services.map((service) => (
-            <ServiceCard
-              key={service._id}
-              service={service}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="mt-8 flex flex-col items-center rounded-2xl border border-dashed border-border bg-card px-6 py-16 text-center">
-          <div className="flex size-20 items-center justify-center rounded-3xl bg-primary/10 text-primary">
-            <Wrench className="size-10" />
-          </div>
-
-          <h3 className="mt-7 text-2xl font-bold">
-            No Repair Services Found
-          </h3>
-
-          <p className="mt-4 max-w-md text-sm leading-7 text-muted-foreground">
-            No services are available for the
-            selected filters. Try changing your
-            search or check back when approved
-            services are available.
-          </p>
-
-          <Link
-            href="/services"
-            className="mt-7 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
-          >
-            Clear Filters
-            <ArrowRight className="size-4" />
-          </Link>
-        </div>
-      )}
-    </>
-  );
-}
-
-// ==================================================
-// LOADING SKELETON
-// ==================================================
-//
-// Displayed while Next.js waits for dynamic
-// service data inside the Suspense boundary.
-//
-
-function ServicesLoadingSkeleton() {
-  return (
-    <div className="space-y-10">
-      {/* Filter Skeleton */}
-      <div className="animate-pulse rounded-2xl border border-border bg-card p-7">
-        <div className="mb-6 h-6 w-48 rounded bg-muted" />
-
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="space-y-3">
-              <div className="h-4 w-24 rounded bg-muted" />
-
-              <div className="h-12 rounded-xl bg-muted" />
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-6 h-12 w-40 rounded-xl bg-muted" />
-      </div>
-
-      {/* Service Cards Skeleton */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {Array.from({ length: 8 }).map((_, index) => (
-          <div
-            key={index}
-            className="animate-pulse overflow-hidden rounded-2xl border border-border bg-card"
-          >
-            <div className="aspect-[16/10] bg-muted" />
-
-            <div className="space-y-4 p-5">
-              <div className="h-5 w-3/4 rounded bg-muted" />
-
-              <div className="h-4 w-1/2 rounded bg-muted" />
-
-              <div className="h-4 w-2/3 rounded bg-muted" />
-
-              <div className="h-10 rounded bg-muted" />
-            </div>
-          </div>
         ))}
       </div>
-    </div>
+
+      {!loading && !error && (
+        <p className="mb-5 text-sm text-muted-foreground">
+          Showing {services.length} services
+          {filter === "all"
+            ? ` (${pendingCount} pending)`
+            : ""}
+        </p>
+      )}
+
+      {/* LOADING / ERROR / EMPTY */}
+
+      {loading ? (
+        <div className="rounded-2xl border border-border bg-card p-12 text-center">
+          <Loader2 className="mx-auto mb-3 size-8 animate-spin text-primary" />
+          Loading service approvals...
+        </div>
+      ) : error ? (
+        <div
+          role="alert"
+          className="rounded-2xl border border-red-500/30 bg-card p-10 text-center"
+        >
+          <p className="font-semibold text-red-600">
+            {error}
+          </p>
+          <button
+            type="button"
+            onClick={() => void refreshServices()}
+            className="mt-4 rounded-xl bg-primary px-5 py-3 text-primary-foreground"
+          >
+            Try Again
+          </button>
+        </div>
+      ) : services.length === 0 ? (
+        <div className="rounded-3xl border border-border bg-card p-14 text-center">
+          <CheckCircle2 className="mx-auto mb-4 size-12 text-primary" />
+          <h2 className="text-xl font-bold">
+            No matching services
+          </h2>
+          <p className="mt-3 text-sm text-muted-foreground">
+            There are no services in this status.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {services.map((service) => (
+            <article
+              key={service._id}
+              className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm"
+            >
+              <div className="flex flex-col gap-6 p-5 md:flex-row">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={service.image}
+                  alt={service.title}
+                  className="h-52 w-full rounded-2xl bg-muted object-cover md:w-56"
+                />
+
+                <div className="min-w-0 flex-1">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${
+                        service.approvalStatus === "approved"
+                          ? "bg-green-500/10 text-green-700 dark:text-green-400"
+                          : service.approvalStatus === "rejected"
+                            ? "bg-red-500/10 text-red-700 dark:text-red-400"
+                            : "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                      }`}
+                    >
+                      {service.approvalStatus}
+                    </span>
+
+                    <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold">
+                      {service.isAvailable
+                        ? "Available"
+                        : "Unavailable"}
+                    </span>
+                  </div>
+
+                  <h2 className="text-xl font-bold">
+                    {service.title}
+                  </h2>
+
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {service.category} · {service.serviceMode}
+                  </p>
+
+                  <p className="mt-3 text-sm">
+                    <strong>Technician:</strong>{" "}
+                    {service.technicianName}
+                  </p>
+
+                  <p className="mt-1 break-all text-sm text-muted-foreground">
+                    {service.technicianEmail}
+                  </p>
+
+                  <p className="mt-2 text-sm">
+                    <strong>Service area:</strong>{" "}
+                    {service.serviceArea}
+                  </p>
+
+                  <p className="mt-1 text-sm">
+                    <strong>Duration:</strong>{" "}
+                    {service.estimatedDuration}
+                  </p>
+
+                  <p className="mt-3 text-2xl font-extrabold text-primary">
+                    ${Number(service.basePrice).toFixed(2)}
+                  </p>
+
+                  <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-muted-foreground">
+                    {service.description}
+                  </p>
+                </div>
+              </div>
+
+              {/* ADMIN ACTIONS */}
+
+              <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border p-5">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  {service.approvalStatus === "pending" ? (
+                    <Clock3 className="size-4" />
+                  ) : (
+                    <CheckCircle2 className="size-4" />
+                  )}
+                  {service.approvalStatus === "pending"
+                    ? "Awaiting review"
+                    : "Reviewed"}
+                </div>
+
+                {service.approvalStatus === "pending" && (
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      disabled={busyId !== null}
+                      onClick={() =>
+                        setConfirmAction({
+                          service,
+                          status: "rejected",
+                        })
+                      }
+                      className="inline-flex items-center gap-2 rounded-xl border border-red-500/30 px-5 py-3 text-sm font-semibold text-red-600 hover:bg-red-500/10 disabled:opacity-50"
+                    >
+                      <XCircle className="size-4" />
+                      Reject
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={busyId !== null}
+                      onClick={() =>
+                        setConfirmAction({
+                          service,
+                          status: "approved",
+                        })
+                      }
+                      className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="size-4" />
+                      Approve
+                    </button>
+                  </div>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+
+      {/* REVIEW CONFIRMATION */}
+
+      {confirmAction && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="review-title"
+            aria-describedby="review-description"
+            className="w-full max-w-md rounded-3xl border border-border bg-card p-7 shadow-2xl"
+          >
+            <h2
+              id="review-title"
+              className="text-xl font-bold"
+            >
+              {confirmAction.status === "approved"
+                ? "Approve Service?"
+                : "Reject Service?"}
+            </h2>
+
+            <p
+              id="review-description"
+              className="mt-3 text-sm leading-7 text-muted-foreground"
+            >
+              You are about to{" "}
+              <strong>{confirmAction.status}</strong>{" "}
+              the service{" "}
+              <strong>
+                {confirmAction.service.title}
+              </strong>
+              .
+            </p>
+
+            <div className="mt-7 flex justify-end gap-3">
+              <button
+                type="button"
+                disabled={busyId !== null}
+                onClick={() =>
+                  setConfirmAction(null)
+                }
+                className="rounded-xl border border-border px-5 py-3 text-sm font-semibold disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                disabled={busyId !== null}
+                onClick={() =>
+                  void confirmReview()
+                }
+                className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+              >
+                {busyId
+                  ? "Saving..."
+                  : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }

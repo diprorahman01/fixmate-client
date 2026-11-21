@@ -6,19 +6,21 @@ import { notFound } from "next/navigation";
 
 import {
   ArrowLeft,
-  ArrowRight,
   Clock3,
   CreditCard,
   MapPin,
   ShieldCheck,
   UserRound,
   Wrench,
+  CheckCircle2,
 } from "lucide-react";
 
 import {
   getServiceById,
   type ServiceDetails,
 } from "@/lib/services";
+
+import { RequestRepair } from "@/components/bookings/request-repair";
 
 // ==========================================
 // TYPES
@@ -69,19 +71,17 @@ function ServiceView({
 }) {
   const technician = service.technician;
 
-  const signInUrl =
-    `/sign-in?callbackURL=${encodeURIComponent(
-      `/services/${service._id}`
-    )}`;
-
   return (
     <>
-      {/* BREADCRUMB */}
+      {/* ==================================
+          BREADCRUMB
+      ================================== */}
+
       <section className="border-b border-border bg-muted/30 py-6">
         <div className="fixmate-container">
           <Link
             href="/services"
-            className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary"
+            className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
           >
             <ArrowLeft className="size-4" />
             Back to Services
@@ -89,13 +89,19 @@ function ServiceView({
         </div>
       </section>
 
-      {/* MAIN CONTENT */}
-      <section className="py-12 sm:py-16">
+      {/* ==================================
+          MAIN SERVICE CONTENT
+      ================================== */}
+
+      <section className="py-10 sm:py-16">
         <div className="fixmate-container grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_350px]">
+
+          {/* LEFT CONTENT */}
 
           <div className="min-w-0 space-y-8">
 
             {/* SERVICE IMAGE */}
+
             <div className="relative aspect-[16/10] overflow-hidden rounded-3xl border border-border bg-muted">
               {service.image ? (
                 <Image
@@ -115,10 +121,18 @@ function ServiceView({
             </div>
 
             {/* TITLE AND DESCRIPTION */}
+
             <div>
-              <span className="inline-flex rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
-                {service.category}
-              </span>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="inline-flex rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
+                  {service.category}
+                </span>
+
+                <span className="inline-flex items-center gap-2 rounded-full bg-green-500/10 px-4 py-2 text-sm font-semibold text-green-700 dark:text-green-400">
+                  <CheckCircle2 className="size-4" />
+                  Approved Service
+                </span>
+              </div>
 
               <h1 className="mt-5 text-3xl font-extrabold tracking-tight sm:text-4xl">
                 {service.title}
@@ -130,7 +144,8 @@ function ServiceView({
             </div>
 
             {/* SERVICE INFORMATION */}
-            <div className="rounded-2xl border border-border bg-card p-7">
+
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-7">
               <h2 className="mb-6 text-xl font-bold">
                 Service Information
               </h2>
@@ -159,7 +174,8 @@ function ServiceView({
             </div>
 
             {/* TECHNICIAN PROFILE */}
-            <div className="rounded-2xl border border-border bg-card p-7">
+
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-7">
               <h2 className="mb-6 text-xl font-bold">
                 About the Technician
               </h2>
@@ -169,7 +185,10 @@ function ServiceView({
                   {technician?.image ? (
                     <Image
                       src={technician.image}
-                      alt={technician.name}
+                      alt={
+                        technician.name ||
+                        service.technicianName
+                      }
                       fill
                       unoptimized
                       sizes="80px"
@@ -180,14 +199,14 @@ function ServiceView({
                   )}
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <h3 className="text-lg font-bold">
                     {technician?.name ||
                       service.technicianName}
                   </h3>
 
                   <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="size-4" />
+                    <MapPin className="size-4 shrink-0" />
                     {technician?.area ||
                       service.serviceArea}
                   </p>
@@ -206,51 +225,75 @@ function ServiceView({
             </div>
           </div>
 
-          {/* PRICE AND REQUEST CARD */}
+          {/* ==================================
+              RIGHT: PRICE & BOOKING CARD
+          ================================== */}
+
           <aside className="lg:sticky lg:top-28">
-            <div className="rounded-3xl border border-border bg-card p-7 shadow-lg">
+            <div className="rounded-3xl border border-border bg-card p-6 shadow-lg sm:p-7">
+
+              {/* STARTING PRICE */}
+
               <p className="text-sm text-muted-foreground">
                 Starting Price
               </p>
 
-              <p className="mt-2 text-4xl font-extrabold">
+              <p className="mt-2 text-4xl font-extrabold text-foreground">
                 ${service.basePrice.toFixed(2)}
               </p>
 
               <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                The final price will be confirmed
-                after the repair is completed.
+                This is the estimated starting
+                price. The technician will confirm
+                the final amount after completing
+                the repair.
               </p>
+
+              {/* SERVICE HIGHLIGHTS */}
 
               <div className="mt-7 space-y-5 border-t border-border pt-6">
                 <div className="flex items-center gap-3 text-sm">
-                  <Clock3 className="size-5 text-primary" />
-                  {service.estimatedDuration}
+                  <Clock3 className="size-5 shrink-0 text-primary" />
+                  <span>{service.estimatedDuration}</span>
                 </div>
 
                 <div className="flex items-center gap-3 text-sm">
-                  <MapPin className="size-5 text-primary" />
-                  {service.serviceArea}
+                  <MapPin className="size-5 shrink-0 text-primary" />
+                  <span>{service.serviceArea}</span>
                 </div>
 
                 <div className="flex items-center gap-3 text-sm">
-                  <CreditCard className="size-5 text-primary" />
-                  Pay after completion
+                  <CreditCard className="size-5 shrink-0 text-primary" />
+                  <span>Pay after completion</span>
                 </div>
               </div>
 
-              <Link
-                href={signInUrl}
-                className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-semibold text-primary-foreground transition-opacity hover:opacity-90"
-              >
-                Sign In to Request Repair
-                <ArrowRight className="size-4" />
-              </Link>
+              {/* ==================================
+                  SESSION 7: REQUEST REPAIR
+              ================================== */}
+
+              <RequestRepair
+                serviceId={service._id}
+                serviceTitle={service.title}
+              />
 
               <p className="mt-4 text-center text-xs leading-6 text-muted-foreground">
-                Only registered customers can
-                request repair services.
+                Only registered Customer accounts
+                can submit repair requests.
               </p>
+
+              {/* SECURITY MESSAGE */}
+
+              <div className="mt-6 flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                <ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" />
+
+                <p className="text-xs leading-6 text-muted-foreground">
+                  Your request will be securely
+                  submitted to the technician.
+                  Payment is only available after
+                  the repair is completed.
+                </p>
+              </div>
             </div>
           </aside>
         </div>
