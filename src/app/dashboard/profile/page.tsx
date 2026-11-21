@@ -46,6 +46,7 @@ export default function UpdateProfilePage() {
         bio: profile.bio, image: profile.image,
       });
       setProfile(result.profile);
+      window.dispatchEvent(new Event("fixmate:profile-updated"));
       toast.success("Profile updated successfully");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Update failed");
