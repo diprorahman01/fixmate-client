@@ -6,6 +6,17 @@ import {
 // ==========================================
 // BOOKING TYPES
 // ==========================================
+export type BookingHistoryEntry = {
+  status:
+    | "requested"
+    | "accepted"
+    | "in-progress"
+    | "completed"
+    | "rejected"
+    | "cancelled"
+    | "paid";
+  changedAt: string;
+};
 
 export type BookingStatus =
   | "requested"
@@ -41,6 +52,9 @@ export type Booking = {
   status: BookingStatus;
   finalAmount: number;
   paymentStatus: PaymentStatus;
+
+    statusHistory?: BookingHistoryEntry[];
+  paidAt?: string;
 
   createdAt: string;
   updatedAt: string;
