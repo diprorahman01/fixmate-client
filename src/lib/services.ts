@@ -29,7 +29,7 @@ export type TechnicianSummary = {
 export type ServiceDetails = RepairService & {technician: TechnicianSummary | null};
 export type ServiceQuery = {
   search?: string; category?: string; serviceMode?: string;
-  sort?: string; limit?: number;
+  sort?: string; limit?: number; page?: number;
 };
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -40,6 +40,7 @@ export async function getServices(query: ServiceQuery = {}): Promise<RepairServi
   if (query.serviceMode) params.set("serviceMode", query.serviceMode);
   if (query.sort) params.set("sort", query.sort);
   if (query.limit !== undefined) params.set("limit", String(query.limit));
+  if (query.page !== undefined) params.set("page", String(query.page));
   const response = await fetch(`${API_URL}/api/services?${params.toString()}`, {cache: "no-store"});
   if (!response.ok) throw new Error(`Failed to load services: ${response.status}`);
   const data: unknown = await response.json();
