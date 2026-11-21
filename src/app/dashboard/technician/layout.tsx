@@ -1,34 +1,14 @@
-
 import { Suspense } from "react";
-
 import { requireRole } from "@/lib/require-role";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 
-type Props = {
-  children: React.ReactNode;
-};
-
-export default function TechnicianLayout({
-  children,
-}: Props) {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen p-10 text-center">
-          Loading technician workspace...
-        </div>
-      }
-    >
-      <ProtectedTechnicianLayout>
-        {children}
-      </ProtectedTechnicianLayout>
-    </Suspense>
-  );
+export default function TechnicianLayout({ children }: { children: React.ReactNode }) {
+  return <Suspense fallback={<div className="p-12 text-center">Loading technician workspace...</div>}>
+    <ProtectedLayout>{children}</ProtectedLayout>
+  </Suspense>;
 }
 
-async function ProtectedTechnicianLayout({
-  children,
-}: Props) {
+async function ProtectedLayout({ children }: { children: React.ReactNode }) {
   await requireRole("technician");
-
-  return <>{children}</>;
+  return <DashboardShell role="technician">{children}</DashboardShell>;
 }
