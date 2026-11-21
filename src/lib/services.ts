@@ -54,3 +54,36 @@ export async function getServiceById(id: string): Promise<ServiceDetails | null>
   if (!response.ok) throw new Error(`Failed to load service: ${response.status}`);
   return response.json() as Promise<ServiceDetails>;
 }
+
+
+// Paginated search is handled by MongoDB on the Express server.
+// Homepage callers continue to use getServices() and receive a plain array.
+export type PaginatedServices = {
+  services: RepairService[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+};
+
+export async function getPaginatedServices(
+  query: ServiceQuery = {},
+): Promise<PaginatedServices> {
+  const params = new URLSearchParams();
+  if (query.search) params.set("search", query.search);
+  if (query.category) params.set("category", query.category);
+  if (query.serviceMode) params.set("serviceMode", query.serviceMode);
+  if (query.sort) params.set("sort", query.sort);
+  params.set("page", String(query.page ?? 1));
+  params.set("limit", String(query.limit ?? 12));
+  const response = await fetch(
+    `${API_URL}/api/services?${params.toString()}`,
+    { cache: "no-store" },
+  );
+  if (!response.ok) throw new Error(`Failed to load services: ${response.status}`);
+  const data: unknown = await response.json();
+  if (!data || typeof data !== "object" || !("services" in data) || !Array.isArray(data.services)) {
+    throw new Error("Server did not return paginated services. Install the server patch first.");
+  }
+  return data as PaginatedServices;
+}
