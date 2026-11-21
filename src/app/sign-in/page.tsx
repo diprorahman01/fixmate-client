@@ -43,7 +43,7 @@ function SignInForm() {
     } finally { setLoading(false); }
   }
 
-  return <section className="flex min-h-[calc(100vh-5rem)] items-center justify-center bg-muted/30 px-4 py-16">
+  return <section className="fixmate-auth-background flex min-h-[calc(100vh-5rem)] items-center justify-center px-4 py-16">
     <div className="w-full max-w-md rounded-3xl border border-border bg-card p-7 shadow-xl sm:p-10">
       <div className="mb-8 text-center"><Wrench className="mx-auto mb-5 size-12 text-primary"/><h1 className="text-3xl font-extrabold">Welcome Back</h1><p className="mt-3 text-sm text-muted-foreground">Sign in to continue your FixMate journey.</p></div>
       <form onSubmit={(event)=>void handleSubmit(event)} className="space-y-5">

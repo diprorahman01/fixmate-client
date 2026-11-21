@@ -179,3 +179,37 @@
     color: transparent;
   }
 }
+
+
+/* FixMate authentication pages */
+
+/* Default: light mode */
+html:not(.dark) .fixmate-auth-background {
+  background-color: #f6f4ff !important;
+  background-image: url("/assets/images/auth-bg-light.png") !important;
+  background-position: center !important;
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
+}
+
+/* Dark mode */
+html.dark .fixmate-auth-background {
+  background-color: #061526 !important;
+  background-image: url("/assets/images/auth-bg.png") !important;
+  background-position: center !important;
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
+}
+
+/* Keep the form card above the background */
+.fixmate-auth-background > div {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 640px) {
+  .fixmate-auth-background {
+    background-position: center !important;
+  }
+}
+
