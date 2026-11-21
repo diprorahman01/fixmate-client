@@ -1,0 +1,54 @@
+/* FixMate 2026 visual refresh: overrides only, safe for dark and light themes. */
+.fixmate-container {
+  width: 100%;
+  max-width: 1680px;
+  margin-inline: auto;
+  padding-inline: clamp(18px, 3.2vw, 52px);
+}
+
+.fm-upgrade .fm-hero-v2 {
+  background: radial-gradient(ellipse at 75% 42%, rgba(0, 214, 220, 0.07), transparent 54%);
+}
+.dark .fm-upgrade .fm-hero-v2 {
+  background: radial-gradient(ellipse at 74% 32%, rgba(8, 213, 225, 0.09), transparent 48%),
+              radial-gradient(ellipse at 15% 95%, rgba(185, 250, 66, 0.04), transparent 52%);
+}
+.fm-hero-grid {
+  opacity: .11;
+  background-image: linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: linear-gradient(90deg, transparent, black 40%, black 80%, transparent);
+}
+.fm-hero-glow { background: radial-gradient(ellipse, rgba(30, 190, 219, .18), transparent 68%); filter: blur(30px); }
+.fm-hero-kicker { border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent); background: color-mix(in srgb, var(--primary) 7%, var(--card)); }
+.fm-hero-heading { font-size: clamp(2.65rem, 5vw, 5.9rem); line-height: 1.065; }
+.fm-accent-text { background: linear-gradient(100deg, var(--primary), #18d6e0 80%); color: transparent; background-clip: text; -webkit-background-clip: text; }
+:root .fm-accent-text { background-image: linear-gradient(100deg, #6346ec, #00a9bd 88%); }
+.dark .fm-accent-text { background-image: linear-gradient(100deg, #b9fa42, #16d9e3 88%); }
+.fm-hero-search { box-shadow: 0 15px 45px rgba(0, 0, 0, .14); }
+.fm-hero-search:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent); }
+.fm-system-strip { border: 1px solid var(--border); background: color-mix(in srgb, var(--card) 80%, transparent); }
+.fm-image-shell { transform: rotate(-1deg); }
+.fm-image-orbit { border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent); transform: rotate(3deg); }
+.fm-status-card { z-index: 3; border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border)); background: color-mix(in srgb, var(--card) 94%, transparent); backdrop-filter: blur(22px); }
+.fm-scan-line { background: linear-gradient(90deg, transparent, rgba(36, 230, 243, .8), transparent); box-shadow: 0 0 28px rgba(36, 230, 243, .35); opacity: .6; }
+.fm-pulse { animation: fm-pulse 2.3s ease-in-out infinite; }
+.fm-float { animation: fm-float 6s ease-in-out infinite; }
+.fm-float-delay { animation-delay: -3s; }
+@keyframes fm-pulse { 50% { opacity: .45; box-shadow: 0 0 14px var(--primary); } }
+@keyframes fm-float { 50% { transform: translateY(-8px); } }
+.fm-category-card, .fm-step-card, .fm-service-card { box-shadow: 0 10px 40px rgba(0, 0, 0, .035); }
+@media (min-width: 2000px) {
+  .fixmate-container { max-width: 1840px; }
+}
+@media (max-width: 1023px) {
+  .fm-hero-heading { font-size: clamp(2.7rem, 7vw, 5rem); }
+}
+@media (max-width: 639px) {
+  .fm-hero-heading { font-size: clamp(2.7rem, 10vw, 4.2rem); }
+  .fm-status-card { max-width: 185px; }
+  .fm-hero-kicker { font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fm-pulse, .fm-float { animation: none !important; }
+}

@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SiteChrome } from "@/components/layout/site-chrome";
 import "./globals.css";
+import "./visual-upgrade.css";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
