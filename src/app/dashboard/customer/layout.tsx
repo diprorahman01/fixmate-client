@@ -12,7 +12,11 @@ const links = [
     label: "My Bookings",
     href: "/dashboard/customer/bookings",
   },
-];
+  {
+    label: "Payment History",
+    href: "/dashboard/customer/payments",
+  },
+];;
 
 export default function CustomerLayout({
   children,

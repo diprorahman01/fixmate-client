@@ -21,6 +21,14 @@ const links = [
     label: "Manage Users",
     href: "/dashboard/admin/users",
   },
+  {
+    label: "All Bookings",
+    href: "/dashboard/admin/bookings",
+  },
+  {
+    label: "Transactions",
+    href: "/dashboard/admin/transactions",
+  },
 ];
 
 // ==========================================
