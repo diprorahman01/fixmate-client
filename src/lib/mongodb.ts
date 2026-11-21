@@ -5,12 +5,11 @@ import dns from "node:dns";
 import { MongoClient } from "mongodb";
 
 // ==========================================
-// MONGODB DNS CONFIGURATION
+// FIXMATE MONGODB DNS CONFIGURATION
 // ==========================================
 
-// Use the same DNS workaround that fixed
-// the Express server's MongoDB connection.
-dns.setServers(["1.1.1.1"]);
+// Use Google DNS, which passed the DNS test.
+dns.setServers(["8.8.8.8"]);
 
 // ==========================================
 // MONGODB CONNECTION
@@ -24,15 +23,17 @@ if (!uri) {
   );
 }
 
-// Reuse the MongoDB client during Next.js
-// development hot reloads.
+// Reuse MongoDB client during Next.js reloads.
 const globalForMongo = globalThis as typeof globalThis & {
   _fixmateMongoClient?: MongoClient;
 };
 
 export const mongoClient =
   globalForMongo._fixmateMongoClient ??
-  new MongoClient(uri);
+  new MongoClient(uri, {
+    serverSelectionTimeoutMS: 10000,
+    connectTimeoutMS: 10000,
+  });
 
 if (process.env.NODE_ENV !== "production") {
   globalForMongo._fixmateMongoClient = mongoClient;

@@ -81,6 +81,7 @@ function SignInForm() {
         <button type="submit" disabled={loading} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 font-semibold text-primary-foreground disabled:opacity-50">{loading ? "Signing in..." : "Sign In"}{!loading && <ArrowRight className="size-4"/>}</button>
       </form>
       <p className="mt-7 text-center text-sm text-muted-foreground">Don&apos;t have an account? <Link href="/sign-up" className="font-semibold text-primary hover:underline">Create Account</Link></p>
+      <p className="mt-3 text-center text-sm"><Link href="/sign-in/admin" className="font-semibold text-primary">Sign In as Admin</Link></p>
       <div className="mt-7 flex items-center justify-center gap-2 border-t border-border pt-6 text-xs text-muted-foreground"><LockKeyhole className="size-4 text-primary"/>Protected by Better Auth</div>
     </div>
   </section>;
