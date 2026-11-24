@@ -5,58 +5,58 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 
-import { auth } from "@/lib/auth";
-import { db, connectToMongoDB } from "@/lib/mongodb";
+import { connectToMongoDB } from "@/lib/mongodb";
 
 type Role = "customer" | "technician" | "admin";
 
-const roleHome = (role: Role) => `/dashboard/${role}`;
+function isValidRole(value: unknown): value is Role {
+  return (
+    value === "customer" ||
+    value === "technician" ||
+    value === "admin"
+  );
+}
+
+function dashboardFor(role: Role) {
+  return `/dashboard/${role}`;
+}
 
 export async function requireRole(requiredRole: Role) {
+  // Keep authorization checks dynamic on every request.
   await connection();
 
-  // Verify the user's Better Auth session.
+  // Establish MongoDB connection BEFORE importing Better Auth.
+  await connectToMongoDB();
+
+  // Load Better Auth after MongoDB is connected.
+  const { auth } = await import("@/lib/auth");
+
   const session = await auth.api.getSession({
     headers: await headers(),
   });
 
-  if (!session) {
+  // Logged-out visitors must sign in.
+  if (!session?.user) {
     redirect(
       `/sign-in?callbackURL=${encodeURIComponent(
-        roleHome(requiredRole)
+        dashboardFor(requiredRole)
       )}`
     );
   }
 
-  // Use the existing MongoDB connection.
-  await connectToMongoDB();
+  // The role comes from the verified server-side session,
+  // not from a browser query parameter.
+  const role: unknown = session.user.role;
 
-  // Read the CURRENT role directly from MongoDB.
-  const user = await db.collection("user").findOne({
-    email: session.user.email,
-  });
-
-  if (!user) {
+  if (!isValidRole(role)) {
     throw new Error(
-      "Authenticated account was not found in MongoDB."
+      "Account role is missing or invalid. Check Better Auth user data."
     );
   }
 
-  const role = user.role;
-
-  if (
-    role !== "customer" &&
-    role !== "technician" &&
-    role !== "admin"
-  ) {
-    throw new Error(
-      "This account does not have a valid role."
-    );
-  }
-
-  // Prevent accessing another role's dashboard.
+  // Users cannot open another role's dashboard.
   if (role !== requiredRole) {
-    redirect(roleHome(role));
+    redirect(dashboardFor(role));
   }
 
   return {
